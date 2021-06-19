@@ -290,63 +290,35 @@ async function updateFromTelegram () {
           // My Additions Here
 
           if (text.match(/(?<=\{).+?(?=\})/g)){  // if there are matches, then go through the loop
-            const matches = text.match(/(?<=\{).+?(?=\})/g) 
-            originBlock = matches[0], firstBlock = matches[1], secondBlock = matches[2], thirdBlock = matches[3], fourthBlock = matches[4]; // hardcoded results
-          
+            let matches = text.match(/(?<=\{).+?(?=\})/g);
             let uid = `telegram-${message.chat.id}-${message.message_id}` // creates telegram Roam Block  UID
 
             // Create parent block
             roamAlphaAPI.createBlock({ 
               location: { "parent-uid": inboxUid, order: maxOrder + i },
-              block: { uid, string: `[[${name}]] at ${hhmm}: ${originBlock}` } 
+              block: { uid, string: `[[${name}]] at ${hhmm}: ${matches[0]}` } 
             })
 
-            // Addition of child blocks 
-            // Haven't tried to figure out the built-in order increment
             let bOrder = 100;
-
             function blockOrder(){ // creates order number by counting down from 100
                 bOrder--;
                 return bOrder;
             }
 
            // Create Child Blocks
-            roamAlphaAPI.createBlock(
-              {"location":
-                {"parent-uid": uid, // Telegram's Unique UID
-                "order": bOrder},
-                "block":
-                {"string": `${firstBlock}`}})
-
-            roamAlphaAPI.createBlock(
-            {"location":
-                {"parent-uid": uid,
-                    "order": bOrder},  
-                    "block":
-                {"string": `${secondBlock}`}})
-
-            roamAlphaAPI.createBlock(
-                {"location":
-                    {"parent-uid": uid,
-                        "order": bOrder},  
-                        "block":
-                    {"string": `${thirdBlock}`}})
-
-            roamAlphaAPI.createBlock(
-                {"location":
-                    {"parent-uid": uid,
-                        "order": bOrder},  
-                        "block":
-                    {"string": `${fourthBlock}`}})
-
-
-
-
-            }
-            else {
-
-            } // Don't know how to close out the else to not cause errors.
-          
+            let j = 1;
+            let arrayLength = matches.length;
+            for (;j < arrayLength; j++) {
+                roamAlphaAPI.createBlock(
+                    {"location":
+                        {"parent-uid": uid,
+                            "order": bOrder},  
+                            "block":
+                        {"string": `${matches[j]}`}})
+                
+            
+                }
+              }
           
 
           let uid = `telegram-${message.chat.id}-${message.message_id}`

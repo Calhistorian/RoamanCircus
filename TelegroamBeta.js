@@ -288,36 +288,72 @@ async function updateFromTelegram () {
             text = "#Contact"
 
           // My Additions Here
+          let mA = text.match(/((?<=\<).+?(?=\>))/g);
+          let mB = text.match(/(?<=\().+?(?=\))/g);
 
-          if (text.match(/(?<=\{).+?(?=\})/g)){  // if there are matches, then go through the loop
-            let matches = text.match(/(?<=\{).+?(?=\})/g);
+          if (text.match("#table") && (mA.length === mB.length)){
+            // let matches = text.match(/(?<=\{).+?(?=\})/g); // old
             let uid = `telegram-${message.chat.id}-${message.message_id}` // creates telegram Roam Block  UID
-
+            let tableTag = "{{table}}"
             // Create parent block
             roamAlphaAPI.createBlock({ 
               location: { "parent-uid": inboxUid, order: maxOrder + i },
-              block: { uid, string: `[[${name}]] at ${hhmm}: ${matches[0]}` } 
+              block: { uid, string: `[[${name}]] at ${hhmm}: ${tableTag}` } // Newly modified
             })
 
-            let bOrder = 100;
-            function blockOrder(){ // creates order number by counting down from 100
-                bOrder--;
-                return bOrder;
-            }
-
-           // Create Child Blocks
-            let j = 1;
-            let arrayLength = matches.length;
-            for (;j < arrayLength; j++) {
-                roamAlphaAPI.createBlock(
-                    {"location":
-                        {"parent-uid": uid,
-                            "order": bOrder},  
-                            "block":
-                        {"string": `${matches[j]}`}})
-                
             
-                }
+            let headUid = roamAlphaAPI.util.generateUID();
+            let today = uidForToday();
+            // Create Header Cells
+            roamAlphaAPI.createBlock(
+              {"location":
+                  {"parent-uid": uid,
+                      "order": 0},  
+                      "block":
+                  {"string": `Day`,
+                      "uid": headUid}})
+            roamAlphaAPI.createBlock(
+              {"location":
+                  {"parent-uid": headUid,
+                      "order": 0},  
+                      "block":
+                  {"string": `${today}`}})
+            
+             // Create Table Cells     
+            let aLength = mA.length;
+            for (i = 0;i < aLength; i++) {
+              // console.log(i);
+              let cellUid = roamAlphaAPI.util.generateUID(); // need to store create uids in an array to be pulled by the next block line.
+              // Block Order Function
+              let bOrder = 100;
+              function blockOrder(){ // creates order number by counting down from 100
+                  bOrder--;
+                  return bOrder;
+              }
+              // Parent Block (Cells on the Left)
+              roamAlphaAPI.createBlock(
+                  {"location":
+                      {"parent-uid": uid,
+                          "order": bOrder},  
+                          "block":
+                      {"string": `${mA[i]}`,
+                          "uid": `${cellUid}`}})
+              // Child Blocks (Cells on the Right)
+                  roamAlphaAPI.createBlock(
+                      {"location":
+                          {"parent-uid": `${cellUid}`, // cellUid array is creating too many uids through the loop.
+                              "order": bOrder},  
+                              "block":
+                          {"string": `${mB[i]}`}})
+                  }  
+                  roamAlphaAPI.updateBlock({"block": 
+                    {"uid": uid,
+                    "open": false}}) 
+            }
+            
+           
+            if (text.match("#table") && (mA.length !== mB.length)){
+              alert("Your <keys> and (values) are unequal. Check to ensure you have a value for every key. ")
               }
           
 

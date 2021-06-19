@@ -288,29 +288,34 @@ function massage (text) {
             let name = message.from ? message.from.first_name : null
             let hhmm = formatTime(message.date)
             let text = massage(message.text) // Removing `|| ""` Taking Text or no string if the other options below.
+
+            if (message.location)
+              text = "#Location"
+            if (message.voice)
+              text = "#Voice"
+            if (message.video_note)
+              text = "#Video"
+            if (message.photo)
+              text = "#Photo"
+            if (message.contact)
+              text = "#Contact"
+
+            // My Additions Here
+
+            if (text.match(/(?<=\{).+?(?=\})/g)){  // if there are matches, then go through the loop
+              const matches = text.match(/(?<=\{).+?(?=\})/g) 
+              originBlock = matches[0], firstBlock = matches[1], secondBlock = matches[2], thirdBlock = matches[3], fourthBlock = matches[4]; // hardcoded results
             
-            // Intercept Text here
-
-
-            // Parse the text
-
-            
-
-            if (text.match(/(?<=\{).+?(?=\})/g)){
-              const matches = text.match(/(?<=\{).+?(?=\})/g)
-              originBlock = matches[0], firstBlock = matches[1], secondBlock = matches[2], thirdBlock = matches[3], fourthBlock = matches[4];
-            
-              let uid = `telegram-${message.chat.id}-${message.message_id}`
+              let uid = `telegram-${message.chat.id}-${message.message_id}` // creates telegram Roam Block  UID
   
-              roamAlphaAPI.createBlock({
+              // Create parent block
+              roamAlphaAPI.createBlock({ 
                 location: { "parent-uid": inboxUid, order: maxOrder + i },
-                block: { uid, string: `[[${name}]] at ${hhmm}: ${originBlock}` } // Then change text here to just parent variable
+                block: { uid, string: `[[${name}]] at ${hhmm}: ${originBlock}` } 
               })
   
-              //The above would be the first action, then ${text} would need to be just the parent block, then the blocks that followed would be parsed out.
-  
-              // Begin My Addition
-  
+              // Addition of child blocks 
+              // Haven't tried to figure out the built-in order increment
               let bOrder = 100;
   
               function blockOrder(){ // creates order number by counting down from 100
@@ -318,10 +323,10 @@ function massage (text) {
                   return bOrder;
               }
   
-             // Create Child Block
+             // Create Child Blocks
               roamAlphaAPI.createBlock(
                 {"location":
-                  {"parent-uid": uid,
+                  {"parent-uid": uid, // Telegram's Unique UID
                   "order": bOrder},
                   "block":
                   {"string": `${firstBlock}`}})
@@ -352,30 +357,17 @@ function massage (text) {
 
               }
               else {
-            
+
+              } // Don't know how to close out the else to not cause errors.
             
             
 
-            if (message.location)
-              text = "#Location"
-            if (message.voice)
-              text = "#Voice"
-            if (message.video_note)
-              text = "#Video"
-            if (message.photo)
-              text = "#Photo"
-            if (message.contact)
-              text = "#Contact"
-            
-            // Add condition if multiple line - This though would replace the `text` variable with the single tag.
-            // if (message.multi)
-            //  text = "#Multi"
   
             let uid = `telegram-${message.chat.id}-${message.message_id}`
-  
+               
             roamAlphaAPI.createBlock({
               location: { "parent-uid": inboxUid, order: maxOrder + i },
-              block: { uid, string: `[[${name}]] at ${hhmm}: ${text}` } // Then change text here to just parent variable
+              block: { uid, string: `[[${name}]] at ${hhmm}: ${text}` } 
             })
 
               }             

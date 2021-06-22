@@ -373,11 +373,11 @@ async function updateFromTelegram () {
           } 
           
           // - 
-          let sA = text.split(">");
-          let arrayLength = sA.length;
+          
           // Multiblock Output
           if (text.match("#multibloc")){
-            
+            let sA = text.split(">");
+            let arrayLength = sA.length;
             let tBlock = sA[0];
             console.log(sA, tBlock, arrayLength);
 

@@ -294,14 +294,14 @@ async function updateFromTelegram () {
             let mA = text.match(/((?<=\<).+?(?=\>))/g);
             let mB = text.match(/(?<=\().+?(?=\))/g);
             
-            
+            if (text.match("#table") && (mA.length !== mB.length)){
+              alert("Your <keys> and (values) are unequal. Check to ensure you have a value for every key. ")
+              }
             if (mA.length === mB.length){
             // let matches = text.match(/(?<=\{).+?(?=\})/g); // old
               
 
-                if (text.match("#table") && (mA.length !== mB.length)){
-                  alert("Your <keys> and (values) are unequal. Check to ensure you have a value for every key. ")
-                  }
+                
 
 
 

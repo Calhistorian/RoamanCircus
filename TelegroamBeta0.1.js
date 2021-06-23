@@ -5,7 +5,7 @@
  */
 
 function massage (text) {
-  text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")
+  //text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")
   return text
 
 
@@ -395,12 +395,15 @@ async function updateFromTelegram () {
             let order = 100;
             
             for (;j < arrayLength; j++) {
+              
+              
+              
               roamAlphaAPI.createBlock(
               {"location":
                   {"parent-uid": uid,
                       "order": order--},  
                       "block":
-                  {"string": `${sA[j]}`}})
+                  {"string": sA[j].replace(/\bTODO\b/, "{{[[TODO]]}}")}})
               }
 
           
@@ -411,9 +414,9 @@ async function updateFromTelegram () {
           // End Mark's Additions
 
 
-
-          
-
+          // Standard message TODO replacement
+          text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")
+        
           roamAlphaAPI.createBlock({
             location: { "parent-uid": inboxUid, order: maxOrder + i },
             block: { uid, string: `[[${name}]] at ${hhmm}: ${text}` }

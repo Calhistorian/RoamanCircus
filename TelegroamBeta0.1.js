@@ -381,9 +381,9 @@ async function updateFromTelegram () {
             let tBlock = sA[0];
             console.log(sA, tBlock, arrayLength);
 
-            // if (text.match("#multibloc") && arrayLength < 1) {
-            //   alert("You did not define multiple blocks using the appropriate delimiter. You blocks will still be outputted, but as a single block.")
-            // }
+            if (text.match("#multibloc") && arrayLength) {
+              alert("You did not define multiple blocks using the appropriate delimiter. You blocks will still be outputted, but as a single block.");
+            }
 
 
             roamAlphaAPI.createBlock({ 

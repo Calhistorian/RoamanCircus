@@ -616,7 +616,7 @@
       roamAlphaAPI.util.generateUID()
 
     let lockPath =
-      `https://binary-semaphore.herokuapp.com/lock/${lockId}/${nonce}`
+      `https://publicpedagogybot.herokuapp.com/lock/${lockId}/${nonce}`
 
     for (;;) {
       let result =

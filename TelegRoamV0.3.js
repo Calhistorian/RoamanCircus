@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Mikael Brockman
+ * Copyright (c) 2021 Mark Robertson - adapted from Mikael Brockman
  *
  * See the LICENSE file (MIT).
  */

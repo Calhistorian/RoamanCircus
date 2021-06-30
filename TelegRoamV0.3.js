@@ -9,7 +9,7 @@
 // because that might conflict with other extensions
 (function () {
   function massage(text) {
-    text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")
+    // text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")
     return text
   }
 
@@ -278,6 +278,129 @@
           text = "#Contact"
 
         let uid = `telegram-${message.chat.id}-${message.message_id}`
+
+        // Mark's Additions
+        // Table Output
+        if (text.match("#table")){
+            let mA = text.match(/((?<=\<).+?(?=\>))/g);
+            let mB = text.match(/(?<=\().+?(?=\))/g);
+            
+            if (text.match("#table") && (mA.length !== mB.length)){
+              alert("Your <keys> and (values) are unequal. Check to ensure you have a value for every key. ")
+              }
+            if (mA.length === mB.length){
+            // let matches = text.match(/(?<=\{).+?(?=\})/g); // old
+          
+
+            
+
+
+
+          let uid = `telegram-${message.chat.id}-${message.message_id}` // creates telegram Roam Block  UID
+          let tableTag = "{{table}}"
+          
+          
+          // Create parent block
+          
+          roamAlphaAPI.createBlock({ 
+            location: { "parent-uid": inboxUid, order: maxOrder + i },
+            block: { uid, string: `[[${name}]] at ${hhmm}: ${tableTag}` } // Newly modified
+          })
+
+          
+          let headUid = roamAlphaAPI.util.generateUID();
+          let today = uidForToday();
+          // Create Header Cells
+          roamAlphaAPI.createBlock(
+            {"location":
+                {"parent-uid": uid,
+                    "order": 0},  
+                    "block":
+                {"string": `Day`,
+                    "uid": headUid}})
+          roamAlphaAPI.createBlock(
+            {"location":
+                {"parent-uid": headUid,
+                    "order": 0},  
+                    "block":
+                {"string": `${today}`}})
+          
+          // Create Table Cells     
+          let aLength = mA.length;
+          for (i = 0;i < aLength; i++) {
+            // console.log(i);
+            let cellUid = roamAlphaAPI.util.generateUID(); // need to store create uids in an array to be pulled by the next block line.
+            // Block Order Function
+            let bOrder = 100;
+            function blockOrder(){ // creates order number by counting down from 100
+                bOrder--;
+                return bOrder;
+            }
+            // Parent Block (Cells on the Left)
+            roamAlphaAPI.createBlock(
+                {"location":
+                    {"parent-uid": uid,
+                        "order": bOrder},  
+                        "block":
+                    {"string": `${mA[i]}`,
+                        "uid": `${cellUid}`}})
+            // Child Blocks (Cells on the Right)
+                roamAlphaAPI.createBlock(
+                    {"location":
+                        {"parent-uid": `${cellUid}`, // cellUid array is creating too many uids through the loop.
+                            "order": bOrder},  
+                            "block":
+                        {"string": `${mB[i]}`}})
+                }  
+                roamAlphaAPI.updateBlock({"block": 
+                  {"uid": uid,
+                  "open": false}}) 
+      
+        
+       
+          
+      
+              }
+            } 
+            // Multiblock Output
+            if (text.match("#multibloc")){
+              let sA = text.split(">");
+              let arrayLength = sA.length;
+              let tBlock = sA[0];
+              console.log(sA, tBlock, arrayLength);
+
+              // if (text.match("#multibloc") && arrayLength) {
+              //   alert("You did not define multiple blocks using the appropriate delimiter. You blocks will still be outputted, but as a single block.");
+              // }
+              roamAlphaAPI.createBlock({ 
+                location: { "parent-uid": inboxUid, order: maxOrder + i },
+                block: { uid, string: `[[${name}]] at ${hhmm}: ${tBlock}` }
+              })                
+              
+              let j = 1;
+              let order = 100;
+              
+              for (;j < arrayLength; j++) {
+                
+                
+                
+                roamAlphaAPI.createBlock(
+                {"location":
+                    {"parent-uid": uid,
+                        "order": order--},  
+                        "block":
+                    {"string": sA[j].replace(/\bTODO\b/, "{{[[TODO]]}}")}})
+                }
+  
+            
+  
+  
+  
+            } 
+        //-----------------------------------------
+      
+        text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")   
+
 
         createNestedBlock(inboxUid, {
           uid,

@@ -280,6 +280,11 @@
         let uid = `telegram-${message.chat.id}-${message.message_id}`
 
         // Mark's Additions
+        
+        // Testing and Debugging
+        
+        console.log(message);
+        
         // Table Output
         if (text.match("#table")){
             let mA = text.match(/((?<=\<).+?(?=\>))/g);

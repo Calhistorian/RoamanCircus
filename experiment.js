@@ -320,30 +320,16 @@
             text = "#Photo"
           if (message.contact)
             text = "#Contact"
+          
           let uid = `telegram-${message.chat.id}-${message.message_id}`
         
           let channelName = message.chat.type === `private` ? `Private Channel` : message.chat.title;
-            //   let channelBlock = `[[${channelName}]]`
 
-        
-  
-          //-----------------------------------------
-
-          if (message.reply_to_message) {
-            
-            
-            // CREATE THE CHANNEL INBOX IF IT DOESN'T EXIST ------------------------------
-            // Assign the UID for the channel Inbox
+          // Channel Handling -------------------------
             let channelInboxUid = `telegram-${dailyNoteInboxUid}-${message.chat.id}-inbox`
-            // Assign the text for the channel inbox
             let inboxBlockString = `[[${channelName}]]`
-
-
-            let maxChannelOrder = findMaxChannelOrder(channelInboxUid)
-
-            // How to send a message to a channel inbox child block
-            
-            // If inboxUid does not exist, create it
+            let maxChannelOrder = findMaxChannelOrder(channelInboxUid)            
+            // Query for channel inbox block
             let doesChannelInboxExist = window.roamAlphaAPI.q(
                 `[:find (pull ?b [
                 [:block/string :as "text"] 
@@ -359,24 +345,35 @@
                 {:block/children ...}
               ]) :where [?b :block/uid "${channelInboxUid}"]]`
               )?.[0]?.[0]
-            console.log(doesChannelInboxExist)
-
+            // console.log(doesChannelInboxExist)
+            // If inboxUid does not exist, create it
             if (doesChannelInboxExist === undefined) {
                 console.log("doesChannelInboxExist does not exist")
                 const result = createNestedBlock(inboxUid, {
                     uid: channelInboxUid,
-                    string: iasdfnboxBlockString,
+                    string: inboxBlockString,
                   })
                 console.log(result)
                 
             }
+        
+  
+          //-----------------------------------------
 
-            createNestedBlock(channelInboxUid, {
+          if (message.reply_to_message) {
+
+            const reply = createNestedBlock(channelInboxUid, {
                 uid,
                 order: maxChannelOrder + i,
-                string: `[[${name}]] at ${hhmm}: ${text}`
+                string: `[[${name}]] replying at ${hhmm}: ${text} {{=: ⤴️ | ((telegram-${message.chat.id}-${message.reply_to_message.message_id}))}}`
               })
-          }
+
+            // const replyTo = createNestedBlock(reply, {
+            //     uid: `${uid}-reply-to`,
+            //     order: 0,
+            //     string: `Reply to: ((telegram-${message.chat.id}-${message.reply_to_message.message_id}))`
+            //   })
+            }
 
 
           //-----------------------------------------
@@ -402,7 +399,7 @@
                   let tableTag = "{{table}}"
                   // Create parent block
                   roamAlphaAPI.createBlock({ 
-                      location: { "parent-uid": inboxUid, order: maxOrder + i },
+                      location: { "parent-uid": channelInboxUid, order: maxChannelOrder + i },
                       block: { uid, string: `[[${name}]] at ${hhmm} from ${channelName}: ${tableTag}` } // Newly modified
                   })
                   let headUid = roamAlphaAPI.util.generateUID();
@@ -467,7 +464,7 @@
               //   alert("You did not define multiple blocks using the appropriate delimiter. You blocks will still be outputted, but as a single block.");
               // }
               roamAlphaAPI.createBlock({ 
-              location: { "parent-uid": inboxUid, order: maxOrder + i },
+              location: { "parent-uid": channelInboxUid, order: maxChannelOrder + i },
               block: { uid, string: `[[${name}]] at ${hhmm}: ${tBlock}` }
               })                
               
@@ -493,11 +490,11 @@
           text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")   
   
   
-        //   createNestedBlock(inboxUid, {
-        //     uid,
-        //     order: maxOrder + i,
-        //     string: `[[${name}]] at ${hhmm}: ${text}`
-        //   })       
+          createNestedBlock(channelInboxUid, {
+            uid,
+            order: maxChannelOrder + i,
+            string: `[[${name}]] at ${hhmm}: ${text}`
+          })       
   
           async function insertFile(fileid, generate) {
             let photo = await GET(
@@ -656,6 +653,7 @@
           }
         }
 // END MESSAGE HANDLING -------------------------------------------------
+
         function handleLiveLocationUpdate() {
           let message = edited_message
           let uid = `telegram-${message.chat.id}-${message.message_id}`

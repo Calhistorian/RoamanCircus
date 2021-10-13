@@ -162,6 +162,19 @@
         let maxOrder = Math.max(-1, ...orders)
         return maxOrder
       }
+
+      function findMaxChannelOrder(parent) {
+        let orders = roamAlphaAPI.q(`[
+          :find (?order ...)
+          :where
+            [?today :block/uid "${parent}"]
+            [?today :block/children ?block]
+            [?block :block/order ?order]
+        ]`)
+  
+        let maxOrder = Math.max(-1, ...orders)
+        return maxOrder
+      }
   
       function createNestedBlock(parent, { uid, order, string, children = [] }) {
         if (uid === undefined) {
@@ -318,20 +331,18 @@
 
           if (message.reply_to_message) {
             
-            // Reassign variable so that subsequent code can use the channel inbox as the parent block, instead of the main inbox block.
-            // let mainInboxUid = inboxUid
-            // let channelInbox = inboxUid
+            
+            // CREATE THE CHANNEL INBOX IF IT DOESN'T EXIST ------------------------------
             // Assign the UID for the channel Inbox
             let channelInboxUid = `telegram-${dailyNoteInboxUid}-${message.chat.id}-inbox`
             // Assign the text for the channel inbox
             let inboxBlockString = `[[${channelName}]]`
 
-            const result = createNestedBlock(inboxUid, {
-              channelInboxUid,
-              string: inboxBlockString,
-            })
+
+            let maxChannelOrder = findMaxChannelOrder(channelInboxUid)
 
             // How to send a message to a channel inbox child block
+            
             // If inboxUid does not exist, create it
             let doesChannelInboxExist = window.roamAlphaAPI.q(
                 `[:find (pull ?b [
@@ -346,14 +357,25 @@
                 [:edit/time :as "editTime"] 
                 :block/props 
                 {:block/children ...}
-              ]) :where [?b :block/uid "${inboxUid}"]]`
+              ]) :where [?b :block/uid "${channelInboxUid}"]]`
               )?.[0]?.[0]
             console.log(doesChannelInboxExist)
-            console.log(result)
-            
 
+            if (doesChannelInboxExist === undefined) {
+                console.log("doesChannelInboxExist does not exist")
+                const result = createNestedBlock(inboxUid, {
+                    uid: channelInboxUid,
+                    string: iasdfnboxBlockString,
+                  })
+                console.log(result)
+                
+            }
 
-            // then insert accordingly
+            createNestedBlock(channelInboxUid, {
+                uid,
+                order: maxChannelOrder + i,
+                string: `[[${name}]] at ${hhmm}: ${text}`
+              })
           }
 
 
@@ -471,11 +493,11 @@
           text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")   
   
   
-          createNestedBlock(inboxUid, {
-            uid,
-            order: maxOrder + i,
-            string: `[[${name}]] at ${hhmm} from [[${channelName}]]: ${text}`
-          })       
+        //   createNestedBlock(inboxUid, {
+        //     uid,
+        //     order: maxOrder + i,
+        //     string: `[[${name}]] at ${hhmm}: ${text}`
+        //   })       
   
           async function insertFile(fileid, generate) {
             let photo = await GET(

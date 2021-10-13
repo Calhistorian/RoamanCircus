@@ -326,9 +326,9 @@
             // Assign the text for the channel inbox
             let inboxBlockString = `[[${channelName}]]`
 
-            const result = createNestedBlock(mainInboxUid, {
-              inboxUid,
-              string: inboxBlock,
+            const result = createNestedBlock(inboxUid, {
+              channelInboxUid,
+              string: inboxBlockString,
             })
 
             // How to send a message to a channel inbox child block

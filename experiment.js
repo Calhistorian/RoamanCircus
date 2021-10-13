@@ -108,8 +108,8 @@
   
       let updateResponse = await GET(`getUpdates?offset=${updateId}&timeout=60`)
       let dailyNoteUid = uidForToday()
-      let dailyNoteInboxUid = inboxUidForToday()
-      console.log(inboxName)
+    //   let dailyNoteInboxUid = inboxUidForToday()
+    //   console.log(inboxName)
       let inboxUid
       let inboxUids = roamAlphaAPI.q(`[
         :find (?uid ...)
@@ -123,8 +123,8 @@
       if (inboxUids.length) {
         inboxUid = inboxUids[0]
       } else {
-        // inboxUid = roamAlphaAPI.util.generateUID()
-        inboxUid = `telegram-${dailyNoteUid}-inbox`
+        inboxUid = roamAlphaAPI.util.generateUID()
+        // inboxUid = `telegram-${dailyNoteUid}-inbox`
         roamAlphaAPI.createBlock({
           location: { "parent-uid": dailyNoteUid, order: 0 },
           block: { uid: inboxUid, string: inboxName }

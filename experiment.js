@@ -109,7 +109,7 @@
       let updateResponse = await GET(`getUpdates?offset=${updateId}&timeout=60`)
       let dailyNoteUid = uidForToday()
       let dailyNoteInboxUid = inboxUidForToday()
-      console.log(inboxName)
+    //   console.log(inboxName)It
       let inboxUid
       let inboxUids = roamAlphaAPI.q(`[
         :find (?uid ...)
@@ -319,12 +319,12 @@
           if (message.reply_to_message) {
             
             // Reassign variable so that subsequent code can use the channel inbox as the parent block, instead of the main inbox block.
-            let mainInboxUid = inboxUid
-            let channelInbox = inboxUid
+            // let mainInboxUid = inboxUid
+            // let channelInbox = inboxUid
             // Assign the UID for the channel Inbox
-            let inboxUid = `telegram-${dailyNoteInboxUid}-${message.chat.id}-inbox`
+            let channelInboxUid = `telegram-${dailyNoteInboxUid}-${message.chat.id}-inbox`
             // Assign the text for the channel inbox
-            let inboxBlock = `[[${channelName}]]`
+            let inboxBlockString = `[[${channelName}]]`
 
             const result = createNestedBlock(mainInboxUid, {
               inboxUid,

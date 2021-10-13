@@ -43,6 +43,15 @@
       let dd = today.getDate().toString().padStart(2, '0')
       return `${mm}-${dd}-${yyyy}`
     }
+
+    function inboxUidForToday() {
+        let today = new Date
+        let yyyy = today.getFullYear()
+        let mm = (today.getMonth() + 1).toString().padStart(2, '0')
+        let dd = today.getDate().toString().padStart(2, '0')
+        return `${yyyy}${mm}${dd}`
+    }
+
   
     function formatTime(unixSeconds) {
       let date = new Date(1000 * unixSeconds)
@@ -99,6 +108,7 @@
   
       let updateResponse = await GET(`getUpdates?offset=${updateId}&timeout=60`)
       let dailyNoteUid = uidForToday()
+      let dailyNoteInboxUid = inboxUidForToday()
   
       let inboxUid
       let inboxUids = roamAlphaAPI.q(`[
@@ -283,6 +293,7 @@
 
 // MESSAGE HANDLING -----------------------------------------------------------
         async function handleMessage() {
+
           let name = message.from ? message.from.first_name : null
           let hhmm = formatTime(message.date)
           let text = massage(message.text || "")
@@ -299,12 +310,48 @@
           let uid = `telegram-${message.chat.id}-${message.message_id}`
         
           let channelName = message.chat.type === `private` ? `Private Channel` : message.chat.title;
-          let channelBlock = `[[${channelName}]]`
+            //   let channelBlock = `[[${channelName}]]`
+
+        
   
           //-----------------------------------------
 
           if (message.reply_to_message) {
-            // first query for inbox block
+            
+            // Reassign variable so that subsequent code can use the channel inbox as the parent block, instead of the main inbox block.
+            let mainInboxUid = inboxUid
+            let channelInbox = inboxUid
+            // Assign the UID for the channel Inbox
+            let inboxUid = `telegram-${dailyNoteInboxUid}-${message.chat.id}-inbox`
+            // Assign the text for the channel inbox
+            let inboxBlock = `[[${channelName}]]`
+
+            const result = createNestedBlock(mainInboxUid, {
+              inboxUid,
+              string: inboxBlock,
+            })
+
+            // How to send a message to a channel inbox child block
+            // If inboxUid does not exist, create it
+            let doesChannelInboxExist = window.roamAlphaAPI.q(
+                `[:find (pull ?b [
+                [:block/string :as "text"] 
+                [:node/title :as "text"] 
+                :block/uid 
+                :block/order 
+                :block/heading 
+                :block/open 
+                [:children/view-type :as "viewType"] 
+                [:block/text-align :as "textAlign"] 
+                [:edit/time :as "editTime"] 
+                :block/props 
+                {:block/children ...}
+              ]) :where [?b :block/uid "${inboxUid}"]]`
+              )?.[0]?.[0]
+            console.log(doesChannelInboxExist)
+            console.log(result)
+            
+
 
             // then insert accordingly
           }

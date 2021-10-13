@@ -109,7 +109,7 @@
       let updateResponse = await GET(`getUpdates?offset=${updateId}&timeout=60`)
       let dailyNoteUid = uidForToday()
       let dailyNoteInboxUid = inboxUidForToday()
-  
+      console.log(inboxName)
       let inboxUid
       let inboxUids = roamAlphaAPI.q(`[
         :find (?uid ...)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Mark Robertson - adapted from Mikael Brockman
+ * Copyright (c) 2021 Mikael Brockman
  *
  * See the LICENSE file (MIT).
  */
@@ -7,6 +7,9 @@
 // we use an "immediately invoked function expression"
 // so our declarations don't become global properties
 // because that might conflict with other extensions
+
+  
+
 (function () {
   function massage(text) {
     text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")
@@ -44,15 +47,6 @@
     return `${mm}-${dd}-${yyyy}`
   }
 
-  function inboxUidForToday() {
-      let today = new Date
-      let yyyy = today.getFullYear()
-      let mm = (today.getMonth() + 1).toString().padStart(2, '0')
-      let dd = today.getDate().toString().padStart(2, '0')
-      return `${yyyy}${mm}${dd}`
-  }
-
-
   function formatTime(unixSeconds) {
     let date = new Date(1000 * unixSeconds)
     let hhmm = date.toLocaleTimeString("en-US", {
@@ -82,7 +76,6 @@
     }
   }
 
-// TELEGRAM UPDATER ------------------------------------------------------------
   async function updateFromTelegram() {
     let corsProxyUrl =
       stripTrailingSlash(
@@ -107,9 +100,13 @@
     }
 
     let updateResponse = await GET(`getUpdates?offset=${updateId}&timeout=60`)
+
+    if (!updateResponse.result.length) {
+      return
+    }
+
     let dailyNoteUid = uidForToday()
-    let dailyNoteInboxUid = inboxUidForToday()
-  //   console.log(inboxName)It
+
     let inboxUid
     let inboxUids = roamAlphaAPI.q(`[
       :find (?uid ...)
@@ -123,48 +120,34 @@
     if (inboxUids.length) {
       inboxUid = inboxUids[0]
     } else {
-      // inboxUid = roamAlphaAPI.util.generateUID()
-      // TODO - Change if needed
-      inboxUid = `telegram-${dailyNoteUid}-inbox`
+      inboxUid = roamAlphaAPI.util.generateUID()
+
+      // put the inbox at the bottom of the daily note
+      let order = findMaxOrder(dailyNoteUid) + 1
       roamAlphaAPI.createBlock({
-        location: { "parent-uid": dailyNoteUid, order: 0 },
+        location: { "parent-uid": dailyNoteUid, order },
         block: { uid: inboxUid, string: inboxName }
       })
     }
 
     let maxOrder = findMaxOrder(inboxUid)
 
-    if (updateResponse.result.length) {
-      let i = 1
-      for (let result of updateResponse.result) {
-        await handleTelegramUpdate(result, i)
-        ++i
-      }
-
-      // Save the latest Telegram message ID in the Roam graph.
-      let lastUpdate = updateResponse.result[updateResponse.result.length - 1]
-      roamAlphaAPI.updateBlock({
-        block: {
-          uid: updateIdBlock.uid,
-          string: `Latest Update ID:: ${lastUpdate.update_id}`
-        }
-      })
+    let i = 1
+    for (let result of updateResponse.result) {
+      await handleTelegramUpdate(result, i)
+      ++i
     }
+
+    // Save the latest Telegram message ID in the Roam graph.
+    let lastUpdate = updateResponse.result[updateResponse.result.length - 1]
+    roamAlphaAPI.updateBlock({
+      block: {
+        uid: updateIdBlock.uid,
+        string: `Latest Update ID:: ${lastUpdate.update_id}`
+      }
+    })
 
     function findMaxOrder(parent) {
-      let orders = roamAlphaAPI.q(`[
-        :find (?order ...)
-        :where
-          [?today :block/uid "${parent}"]
-          [?today :block/children ?block]
-          [?block :block/order ?order]
-      ]`)
-
-      let maxOrder = Math.max(-1, ...orders)
-      return maxOrder
-    }
-
-    function findMaxChannelOrder(parent) {
       let orders = roamAlphaAPI.q(`[
         :find (?order ...)
         :where
@@ -262,10 +245,10 @@
 
         let url = urlWithParams(
           "https://www.openstreetmap.org/export/embed.html", {
-            layer: "mapnik",
-            bbox,
-            marker
-          })
+          layer: "mapnik",
+          bbox,
+          marker
+        })
 
         return {
           embed: `:hiccup[:iframe {
@@ -294,235 +277,51 @@
         })
       }
 
-      function createChannelInbox(inboxUid, uid, channelName) {
-        if (uid === undefined) {
-          uid = roamAlphaAPI.util.generateUID()
-        }
-        
-        // if (order === undefined) {
-          order = findMaxOrder(inboxUid) + 1
-        // }
-        let inboxBlock = `[[${channelName}]]`
-        let channelInboxUid = `telegram-${channelName}-inbox`
-        roamAlphaAPI.createBlock({
-          location: { "parent-uid": inboxUid, order },
-          block: { channelInboxUid, string: inboxBlock }
-        })
-        return channelInboxUid
-      }
-
-
-// MESSAGE HANDLING -----------------------------------------------------------
       async function handleMessage() {
-
         let name = message.from ? message.from.first_name : null
         let hhmm = formatTime(message.date)
         let text = massage(message.text || "")
+
         if (message.location)
           text = "#Location"
         if (message.voice)
           text = "#Voice"
-        if (message.video_note)
+        if (message.video || message.video_note || message.animation)
           text = "#Video"
         if (message.photo)
           text = "#Photo"
         if (message.contact)
           text = "#Contact"
-        
+
         let uid = `telegram-${message.chat.id}-${message.message_id}`
-      
-        let channelName = message.chat.type === `private` ? `Private Channel` : message.chat.title;
+
+        console.log(message)
 
         let parent = inboxUid
-        // Channel Handling -------------------------
-          let channelInboxUid = `telegram-${dailyNoteInboxUid}-${message.chat.id}-inbox`
-          let inboxBlockString = `[[${channelName}]]`
-          let maxChannelOrder = findMaxChannelOrder(channelInboxUid)            
-          // Query for channel inbox block
-          let doesChannelInboxExist = window.roamAlphaAPI.q(
-              `[:find (pull ?b [
-              [:block/string :as "text"] 
-              [:node/title :as "text"] 
-              :block/uid 
-              :block/order 
-              :block/heading 
-              :block/open 
-              [:children/view-type :as "viewType"] 
-              [:block/text-align :as "textAlign"] 
-              [:edit/time :as "editTime"] 
-              :block/props 
-              {:block/children ...}
-            ]) :where [?b :block/uid "${channelInboxUid}"]]`
-            )?.[0]?.[0]
-          // console.log(doesChannelInboxExist)
-          // If inboxUid does not exist, create it
-          if (doesChannelInboxExist === undefined) {
-              console.log("doesChannelInboxExist does not exist")
-              const result = createNestedBlock(inboxUid, {
-                  uid: channelInboxUid,
-                  string: inboxBlockString,
-                })
-              console.log(result)
-              
-          }
-      
-
-        //-----------------------------------------
-
-      // Alternate Reply
-      // if (message.reply_to_message) {
-      //     parent = [
-      //       "telegram",
-      //       message.reply_to_message.chat.id,
-      //       message.reply_to_message.message_id,
-      //     ].join("-")
-
-      //     if (!blockExists(parent)) {
-      //         // the message replied to is included in the reply
-      //         // so we should use that
-      //         // but for now we just make a placeholder
-      //         createNestedBlock(inboxUid, {
-      //           uid: parent,
-      //           string: "[[Telegroam: placeholder for missing message]]"
-      //         })
-      //     }
-      // End Alternate Reply
 
         if (message.reply_to_message) {
+          parent = [
+            "telegram",
+            message.reply_to_message.chat.id,
+            message.reply_to_message.message_id,
+          ].join("-")
 
-          const reply = createNestedBlock(channelInboxUid, {
-              uid,
-              order: maxChannelOrder + i,
-              string: `[[${name}]] replying at ${hhmm}: ${text} {{=: ⤴️ | ((telegram-${message.chat.id}-${message.reply_to_message.message_id}))}}`
+          if (!blockExists(parent)) {
+            // the message replied to is included in the reply
+            // so we should use that
+            // but for now we just make a placeholder
+            createNestedBlock(inboxUid, {
+              uid: parent,
+              string: "[[Telegroam: placeholder for missing message]]"
             })
-
-          // const replyTo = createNestedBlock(reply, {
-          //     uid: `${uid}-reply-to`,
-          //     order: 0,
-          //     string: `Reply to: ((telegram-${message.chat.id}-${message.reply_to_message.message_id}))`
-          //   })
           }
+        }
 
-
-        //-----------------------------------------
-        //-----------------------------------------
-        //-----------------------------------------
-        // Mark's Additions
-        console.log(message);
-        //-----------------------------------------
-
-        // Table Output
-        if (text.match("#table")){
-            let mA = text.match(/((?<=\<).+?(?=\>))/g);
-            let mB = text.match(/(?<=\().+?(?=\))/g);
-            
-            if (text.match("#table") && (mA.length !== mB.length)){
-                // Error Handling if format is not correct
-              alert("Your <keys> and (values) are unequal. Check to ensure you have a value for every key. ")
-              }
-            // Formatting Table
-            if (mA.length === mB.length){
-
-                // let uid = `telegram-${message.chat.id}-${message.message_id}` // creates telegram Roam Block  UID
-                let tableTag = "{{table}}"
-                // Create parent block
-                roamAlphaAPI.createBlock({ 
-                    location: { "parent-uid": channelInboxUid, order: maxChannelOrder + i },
-                    block: { uid, string: `[[${name}]] at ${hhmm} from ${channelName}: ${tableTag}` } // Newly modified
-                })
-                let headUid = roamAlphaAPI.util.generateUID();
-                let today = uidForToday();
-          
-                // Create Header Cells
-                roamAlphaAPI.createBlock(
-                    {"location":
-                        {"parent-uid": uid,
-                            "order": 0},  
-                            "block":
-                        {"string": `Day`,
-                            "uid": headUid}})
-                roamAlphaAPI.createBlock(
-                    {"location":
-                        {"parent-uid": headUid,
-                            "order": 0},  
-                            "block":
-                        {"string": `${today}`}})
-                
-                // Create Table Cells     
-                let aLength = mA.length;
-                for ( i = 0 ; i < aLength; i++ ) {
-                    // console.log(i);
-                    let cellUid = roamAlphaAPI.util.generateUID(); // need to store create uids in an array to be pulled by the next block line.
-                    // Block Order Function
-                    let bOrder = 100;
-                    function blockOrder(){ // creates order number by counting down from 100
-                        bOrder--;
-                        return bOrder;
-                    }
-                    // Parent Block (Cells on the Left)
-                    roamAlphaAPI.createBlock(
-                        {"location":
-                            {"parent-uid": uid,
-                                "order": bOrder},  
-                                "block":
-                            {"string": `${mA[i]}`,
-                                "uid": `${cellUid}`}})
-                    // Child Blocks (Cells on the Right)
-                        roamAlphaAPI.createBlock(
-                            {"location":
-                                {"parent-uid": `${cellUid}`, // cellUid array is creating too many uids through the loop.
-                                    "order": bOrder},  
-                                    "block":
-                                {"string": `${mB[i]}`}})
-                        }  
-                        roamAlphaAPI.updateBlock({"block": 
-                        {"uid": uid,
-                        "open": false}}) 
-                }
-            }
-
-        // Multiblock Output
-        if (text.match("#multibloc")){
-            let sA = text.split(">");
-            let arrayLength = sA.length;
-            let tBlock = sA[0];
-            console.log(sA, tBlock, arrayLength);
-
-            // if (text.match("#multibloc") && arrayLength) {
-            //   alert("You did not define multiple blocks using the appropriate delimiter. You blocks will still be outputted, but as a single block.");
-            // }
-            roamAlphaAPI.createBlock({ 
-            location: { "parent-uid": channelInboxUid, order: maxChannelOrder + i },
-            block: { uid, string: `[[${name}]] at ${hhmm}: ${tBlock}` }
-            })                
-            
-            let j = 1;
-            let order = 100;
-            
-            for (;j < arrayLength; j++) {
-                roamAlphaAPI.createBlock(
-                {"location":
-                    {"parent-uid": uid,
-                        "order": order--},  
-                        "block":
-                    {"string": sA[j].replace(/\bTODO\b/, "{{[[TODO]]}}")}})
-                }
-            } 
-
-        //-----------------------------------------
-        //-----------------------------------------
-        //-----------------------------------------
-        //-----------------------------------------
-        
-
-        text = text.replace(/\bTODO\b/, "{{[[TODO]]}}")   
-
-            // change to parent if needed
-        createNestedBlock(channelInboxUid, {
+        createNestedBlock(parent, {
           uid,
-          order: maxChannelOrder + i,
+          order: maxOrder + i,
           string: `[[${name}]] at ${hhmm}: ${text}`
-        })       
+        })
 
         async function insertFile(fileid, generate) {
           let photo = await GET(
@@ -586,9 +385,16 @@
         if (message.voice) {
           await insertFile(message.voice.file_id, audio)
         }
+        if (message.video) {
+          await insertFile(message.video.file_id, video)
+        }
 
         if (message.video_note) {
           await insertFile(message.video_note.file_id, video)
+        }
+
+        if (message.animation) {
+          await insertFile(message.animation.file_id, video)
         }
 
         if (message.document) {
@@ -680,7 +486,6 @@
           }
         }
       }
-// END MESSAGE HANDLING -------------------------------------------------
 
       function handleLiveLocationUpdate() {
         let message = edited_message
@@ -712,9 +517,7 @@
       }
     }
   }
-// END TELEGRAM UPDATER ------------------------------------------------- 
 
-  // Utilities and Operations
   function sleep(s) {
     return new Promise(ok => setTimeout(ok, 1000 * s))
   }
@@ -737,6 +540,7 @@
     ok: 200,
     busy: 423,
   }
+
   let currentLockPath
 
   async function runWithMutualExclusionLock({ waitSeconds, action }) {
@@ -747,24 +551,25 @@
       roamAlphaAPI.util.generateUID()
 
     let lockPath =
-      `https://binary-semaphore.herokuapp.com/lock/${lockId}/${nonce}`
+      `https://roam-binary-semaphore.herokuapp.com/lock/${lockId}/${nonce}`
 
-      let acquirePath = `${lockPath}/acquire`
-      let releasePath = `${lockPath}/release`
+    let acquirePath = `${lockPath}`
+    let releasePath = `${lockPath}`
 
-    for (;;) {
+    for (; ;) {
       let result =
-      await fetch(acquirePath, { method: "POST" })
+        await fetch(acquirePath, { method: "PUT" })
 
       if (result.status === lockStatus.ok) {
-          currentLockPath = lockPath
+        currentLockPath = lockPath
+
         try {
           return await action()
         } finally {
           console.log("telegroam: releasing lock")
           currentLockPath = null
           try {
-              await fetch(releasePath, { method: "POST" })    
+            await fetch(releasePath, { method: "DELETE" })
           } catch (e) {
             console.error(e)
             throw e
@@ -779,7 +584,7 @@
   }
 
   async function updateFromTelegramContinuously() {
-    for (;;) {
+    for (; ;) {
       try {
         let result = await runWithMutualExclusionLock({
           waitSeconds: 30,
@@ -1026,4 +831,5 @@
     return parse(string)
   }
 
-})()
+  }
+)()
